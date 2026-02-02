@@ -50,6 +50,12 @@ end
 
 
 for i, recipe in pairs (data.raw.recipe) do
+
+	if string.sub(recipe.name , -10) =="-recycling" then 
+		log(string.format("[LootingRemnants-gbd] Ignoring recipe (not building loot for output) : '%s'", recipe.name))
+		goto end_of_loop 
+	end
+
 	local exception_recipe = is_exception_mod (recipe.exception_mods)
 	
 	local handler = recipe.normal or recipe -- nice, no?
@@ -140,6 +146,7 @@ for i, recipe in pairs (data.raw.recipe) do
 		log('exception for recipe: ' .. recipe.name)	
 		-- exception for recipe or to result or no ingredients
 	end
+	::end_of_loop::
 end
 
 log ('entity_types: ' .. serpent.line(entity_types))
