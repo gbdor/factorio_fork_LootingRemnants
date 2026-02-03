@@ -116,11 +116,11 @@ elseif not exception_recipe and handler.results and handler.ingredients then
 					for j, ingredient in pairs (handler.ingredients) do
 						local ing_type = ingredient.type or 'item'
 						if ing_type == 'item' then
---							local result_count = handler.result_count or 1
-local result_count = result_amount or 1
-local ing_item_name = ingredient.name or ingredient[1]
-local count_min = 0
-local count_max = ingredient.amount or ingredient[2]
+							-- local result_count = handler.result_count or 1
+							local result_count = result_amount or 1
+							local ing_item_name = ingredient.name or ingredient[1]
+							local count_min = 0
+							local count_max = ingredient.amount or ingredient[2]
 							if count_max < 1 then count_max = 1 end -- added in 0.1.4
 							local probability = 1
 							if count_max == 1 then 
