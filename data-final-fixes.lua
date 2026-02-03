@@ -1,9 +1,23 @@
+local constants = require("lua/constants")
+
+
 -- darkfrei 2020-12-03: I want to rewrite it, but now just update
 
 -- LootingRemnants
 
 local entity_loot = {}
 local entity_types = {}
+
+
+-- read settings
+local settings_loot_proba = settings.startup[constants.MOD_NAME .. "-loot-proba"].value
+local settings_loot_min = settings.startup[constants.MOD_NAME .. "-loot-min"].value
+local settings_loot_max = settings.startup[constants.MOD_NAME .. "-loot-max"].value
+
+if settings_loot_max < settings_loot_min then
+	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", constants.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
+end
+
 
 
 function is_exception_mod (exception_mods) -- exception for mod, just list of names of mods
@@ -103,7 +117,7 @@ elseif not exception_recipe and handler.results and handler.ingredients then
 	if #results == 1 then
 		local item_name = results[1].name
 		local result_type = results[1].type
-		local result_amount = results[1].amount
+		local result_amount = results[1].amount or 1
 		local item_prototype = data.raw.item[item_name]
 		if result_type == "item" and item_prototype and item_prototype.place_result then
 			
@@ -116,28 +130,19 @@ elseif not exception_recipe and handler.results and handler.ingredients then
 					for j, ingredient in pairs (handler.ingredients) do
 						local ing_type = ingredient.type or 'item'
 						if ing_type == 'item' then
-							-- local result_count = handler.result_count or 1
-							local result_count = result_amount or 1
 							local ing_item_name = ingredient.name or ingredient[1]
-							local count_min = 0
-							local count_max = ingredient.amount or ingredient[2]
-							if count_max < 1 then count_max = 1 end -- added in 0.1.4
-							local probability = 1
-							if count_max == 1 then 
-								count_min = 1
-							-- probability = 0.5 / result_count
-						else
-							-- count_max = count_max / result_count
+							local ing_actual_cost = (ingredient.amount or ingredient[2])/result_amount
+
+							local count_min = settings_loot_min*ing_actual_cost
+							local count_max = settings_loot_max*ing_actual_cost
 						end
-						
-						table.insert (loot, {item=ing_item_name, probability=probability, count_min=count_min, count_max = count_max})
 					end
+					table.insert (loot, {item=ing_item_name, probability=settings_loot_proba, count_min=count_min, count_max = count_max})
 				end
-				if #loot > 0 then
+				if loot and #loot > 0 then
 					prototype.loot = loot
 				end
-			end
-				else -- no prototype
+			else -- no prototype or is_exception_mod
 				log ('no prototype recipe: ["'..recipe.name..'"] item_type: ["'..item_prototype.type..'"] item_name: ["'..item_name..'"] entity_name: ["'..entity_name..'"]')
 			end
 		end
