@@ -112,14 +112,19 @@ for i, recipe in pairs (data.raw.recipe) do
 		end
 	end
 elseif not exception_recipe and handler.results and handler.ingredients then
-	log('new recipe with results: ' .. recipe.name)	
+
 	local results = handler.results
-	if #results == 1 then
+	if #results > 1 then
+		-- log(string.format("Ignoring recipe with more than 1 result: %s", serpent.block(handler.results)))
+	elseif #results == 1 then
+		
 		local item_name = results[1].name
 		local result_type = results[1].type
 		local result_amount = results[1].amount or 1
 		local item_prototype = data.raw.item[item_name]
+
 		if result_type == "item" and item_prototype and item_prototype.place_result then
+			log('new recipe with results: ' .. recipe.name)	
 			
 			local entity_name = item_prototype.place_result
 			local prototype = get_entity_prototype (entity_name)
@@ -128,6 +133,11 @@ elseif not exception_recipe and handler.results and handler.ingredients then
 				if not prototype.loot then
 					local loot = {}
 					for j, ingredient in pairs (handler.ingredients) do
+
+						if ingredient[2] then
+							log(string.format("[%s] %s has ingredient[2] - handler.ingredients = %s", constants.MOD_NAME, item_name, serpent.block(handler.ingredients)))
+						end
+
 						local ing_type = ingredient.type or 'item'
 						if ing_type == 'item' then
 							local ing_item_name = ingredient.name or ingredient[1]
