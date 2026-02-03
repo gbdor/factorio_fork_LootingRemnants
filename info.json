@@ -1,6 +1,6 @@
 {
   "name": "LootingRemnants",
-  "version": "2.0.0",
+  "version": "2.0.1",
   
   "title": "Looting Remnants",
   "description": "On destroying of buildings you have a chance to get some loot from it; good for PVP multiplayer games",
@@ -8,6 +8,13 @@
   "author": "darkfrei",
   "license": "MIT",
   
-  "dependencies": ["base"],
+  "dependencies":
+  [
+    "base >= 2.0.60",
+    
+    "?AbandonedRuins_updated_fork >= 1.4.18",
+    "?FortressRuins >= 1.1.1"
+  ],
+
   "factorio_version": "2.0"
 }
