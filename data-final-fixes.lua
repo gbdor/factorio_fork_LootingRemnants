@@ -2,6 +2,20 @@
 
 -- LootingRemnants
 
+
+local items_that_should_never_spawn = {
+"electric-energy-interface",
+"linked-chest",
+"infinity-chest",
+"infinity-pipe",
+"infinity-cargo-wagon",
+"heat-interface",
+"proxy-container",
+"bottomless-chest",
+"linked-belt",
+
+}
+
 local entity_loot = {}
 local entity_types = {}
 
@@ -85,6 +99,13 @@ for i, recipe in pairs (data.raw.recipe) do
 				else
 					-- count_max = count_max / result_count
 				end
+
+				if is_value_in_list(ingredient.name, items_that_should_never_spawn) then
+					log(string.format("SHOULD NEVER SPAWN : '%s' as loot for '%s'", ingredient.name, recipe))
+					break
+				else
+					log(string.format("ALLOWED TO SPAWN : '%s' as loot for '%s'", ingredient.name, recipe))
+				end				
 				
 				table.insert (loot, {item=ing_item_name, probability=probability, count_min=count_min, count_max = count_max})
 			end
