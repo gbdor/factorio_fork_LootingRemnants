@@ -1,10 +1,16 @@
-local CONSTANTS = require("cfg/CONSTANTS")
+local CONSTANTS = require("cfg/constants")
 
 
 -- TODO: add manual ignores
 
 data:extend({
   {
+    type = "bool-setting",
+    name = CONSTANTS.MOD_NAME .. "-verbose-logging",
+    setting_type = "startup",
+    default_value = false,
+    order = "aa",
+  },{
     type = "double-setting",
     name = CONSTANTS.MOD_NAME .. "-loot-proba",
     setting_type = "startup",

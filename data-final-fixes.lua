@@ -1,6 +1,11 @@
 -- LootingRemnants
 -- darkfrei 2020-12-03 (original), refactored
 
+
+-----------------------------------
+-- CONSTANTS and SETTINGS
+-----------------------------------
+
 local IGNORES = require("cfg/ignores")
 local CONSTANTS = require("cfg/constants")
 
@@ -8,10 +13,24 @@ local CONSTANTS = require("cfg/constants")
 local settings_loot_proba = settings.startup[CONSTANTS.MOD_NAME .. "-loot-proba"].value
 local settings_loot_min = settings.startup[CONSTANTS.MOD_NAME .. "-loot-min"].value
 local settings_loot_max = settings.startup[CONSTANTS.MOD_NAME .. "-loot-max"].value
+local settings_verbose = settings.startup[CONSTANTS.MOD_NAME .. "-verbose-logging"].value or false
 
 if settings_loot_max < settings_loot_min then
-	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", CONSTANTS.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
+	error(("[%s.%s] loot max (%d) < loot min (%d)"):format(CONSTANTS.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
 end
+
+-----------------------------------
+-- LOGGING
+-----------------------------------
+
+-- L is an alias to either log() if enabled, otherwise to a no-op function
+-- call with L(("%s ..."):format(x, ..))
+local L = settings_verbose and log or function() end
+
+-- Prefix could be added with this hack
+-- local P = "[prefix] "
+-- local L = <setting> and log or function() end
+-- L(P .. ("x=%s"):format(x))
 
 
 -----------------------------------
@@ -29,7 +48,7 @@ local function is_excepted(prototype)
 	if type(mods) ~= "table" then return false end
 	for _, name in pairs(mods) do
 		if name == CONSTANTS.MOD_NAME then 
-			log(string.format("[LootingRemnants] Skipping proto '%s' that has an exclusion for mods %s", prototype.name, serpent.line(mods)))
+			L(("Skipping proto '%s' that has an exclusion for mods %s"):format(prototype.name, serpent.line(mods)))
 			return true 
 		end
 	end
@@ -40,19 +59,17 @@ end
 local function append_nospawn_items(nospawn_table, comma_separated_items_list)
 
 	if type(comma_separated_items_list) ~= "string" then
-		error(string.format("Unable to parse exclude string'%s' - expecting comma-separated list", comma_separated_items_list))
+		error(("Unable to parse exclude string'%s' - expecting comma-separated list"):format(comma_separated_items_list))
 	end
 
 	if comma_separated_items_list == "" then return end
 
-	log(string.format("[LootingRemnants] Adding custom no-spawn items '%s' -> BEFORE %s", comma_separated_items_list, serpent.block(nospawn_table)))
-
 	for itemname in string.gmatch(comma_separated_items_list,  "[^,%s]+") do
-		log(string.format("[LootingRemnants] processing item '%s'", itemname))
+		L(("processing item '%s'"):format(itemname))
 		nospawn_table[itemname] = true
 	end
 
-	log(string.format("[LootingRemnants] Updated no-spawn list is -> AFTER %s" , serpent.block(nospawn_table)))
+	L(("Updated no-spawn with '%s' -> %s"):format(comma_separated_items_list, serpent.line(nospawn_table)))
 end
 
 
@@ -95,7 +112,7 @@ local function build_loot(recipe)
 		local ing = normalise_ingredient(raw_ingredient)
 		if ing then
 			if IGNORES.ITEMS_NEVER_SPAWN[ing.name] then
-				log(string.format("[LootingRemnants] Skipping blacklisted item '%s' from recipe '%s'", ing.name, recipe.name))
+				L(("Skipping blacklisted item '%s' from recipe '%s'"):format(ing.name, recipe.name))
 			else
 				local actual_cost = ing.amount/(recipe.results.amount or 1) 
 				local cur_loot_item = {
@@ -110,7 +127,7 @@ local function build_loot(recipe)
 		end
 	end
 
-	log(string.format("[LootingRemnants] Recipe '%s' provides loot %s", recipe.name, serpent.block(loot)))
+	L(("Recipe '%s' provides loot %s"):format(recipe.name, serpent.block(loot)))
 	return (#loot > 0) and loot or nil
 end
 
@@ -128,7 +145,7 @@ local function get_recipe_item_output(recipe)
 	for _, output in pairs(recipe.results) do
 		if output.type == "item" then
 			if found then
-				log(string.format("[LootingRemnants] Skipping recipe '%s' — multiple item outputs", recipe.name))
+				L(("Skipping recipe '%s' — multiple item outputs"):format(recipe.name))
 				return nil
 			end
 			found = output
@@ -136,7 +153,7 @@ local function get_recipe_item_output(recipe)
 	end
 
 	if not found then
-		log(string.format("[LootingRemnants] Skipping recipe '%s' — no item outputs", recipe.name))
+		L(("Skipping recipe '%s' — no item outputs"):format(recipe.name))
 		return nil
 	end
 
@@ -157,30 +174,30 @@ local function process_recipe(recipe, seen_types)
 
 	local item_proto = data.raw.item[output.name]
 	if not item_proto or not item_proto.place_result then
-		-- log(string.format("[LootingRemnants] Skipping non-placeable item '%s' in recipe '%s'", output.name, recipe.name))
+		L(("Skipping non-placeable item '%s' in recipe '%s'"):format(output.name, recipe.name))
 		return
 	end
 
 	local entity_name = item_proto.place_result
 	local entity_proto = find_entity_prototype(entity_name, seen_types)
 	if not entity_proto then
-		-- log(string.format("[LootingRemnants] No minable prototype found for entity '%s' in recipe '%s'", entity_name, recipe.name))
+		L(("No minable prototype found for entity '%s' in recipe '%s'"):format(entity_name, recipe.name))
 		return
 	end
 
 	if is_excepted(entity_proto) then return end
 
 	if entity_proto.loot then
-		log(string.format("[LootingRemnants] Skipping entity '%s' in recipe '%s' — already has loot %s", entity_name, recipe.name, serpent.block(entity_proto.loot)))
+		L(("Skipping entity '%s' in recipe '%s' — already has loot %s"):format(entity_name, recipe.name, serpent.block(entity_proto.loot)))
 		return
 	end
 
 	local loot = build_loot(recipe)
 	if loot then
 		entity_proto.loot = loot
-		log(string.format("[LootingRemnants] Assigned %d loot entries to '%s' in recipe '%s'", #loot, entity_name, recipe.name))
+		L(("Assigned %d loot entries to '%s' in recipe '%s'"):format(table_size(loot), entity_name, recipe.name))
 	else
-		log(string.format("[LootingRemnants] No valid loot built for entity '%s' in recipe '%s'", entity_name, recipe.name))
+		L(("No valid loot built for entity '%s' in recipe '%s'"):format(entity_name, recipe.name))
 	end
 end
 
@@ -197,10 +214,10 @@ for _, recipe in pairs(data.raw.recipe) do
 
     -- Skip recycling recipes
     if string.sub(recipe.name, -10) == "-recycling" then
-    	-- log(string.format("[LootingRemnants] Skipping recycling recipe '%s'", recipe.name))
+    	L(("Skipping recycling recipe '%s'"):format(recipe.name))
 
     elseif is_excepted(recipe) then
-    	log(string.format("[LootingRemnants] Skipping excepted recipe '%s'", recipe.name))
+    	L(("Skipping excepted recipe '%s'"):format(recipe.name))
 
     else
     	process_recipe(recipe, seen_types)
@@ -210,4 +227,4 @@ for _, recipe in pairs(data.raw.recipe) do
 -- Log all prototype types that were encountered
 local type_list = {}
 for t in pairs(seen_types) do table.insert(type_list, t) end
--- log("[LootingRemnants] Entity prototype types encountered: " .. serpent.line(type_list))
+log("Added loot to entities: " .. serpent.line(type_list))

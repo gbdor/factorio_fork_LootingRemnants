@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.0
+Date: 2026-02-05
+  Breaking Changes:
+    - Drops compatibility with factorio versions < 1.1 (see MR#7)
+  Changes
+    - Loot amount is configurable (see MR#6)
+    - Never-spawn items now configurable (cheat items already included) (see MR#8)
+---------------------------------------------------------------------------------------------------
 Version: 2.0.1
 Date: 2026-02-03
   Changes:
