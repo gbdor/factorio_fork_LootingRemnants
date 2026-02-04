@@ -32,7 +32,7 @@ local function is_excepted(prototype)
 	if type(mods) ~= "table" then return false end
 	for _, name in pairs(mods) do
 		if name == "LootingRemnants" then 
-			log(string.format("[LootingRemnants] Skipping proto that has an exclusion for mods %s", serpent.line(mods)))
+			log(string.format("[LootingRemnants] Skipping proto '%s' that has an exclusion for mods %s", prototype.name, serpent.line(mods)))
 			return true 
 		end
 	end
@@ -163,7 +163,7 @@ local function process_recipe(recipe, seen_types)
 		return
 	end
 
-	local loot = build_loot(recipe.ingredients, recipe.name)
+	local loot = build_loot(recipe.ingredients)
 	if loot then
 		entity_proto.loot = loot
 		log(string.format("[LootingRemnants] Assigned %d loot entries to '%s' in recipe '%s'", #loot, entity_name, recipe.name))
