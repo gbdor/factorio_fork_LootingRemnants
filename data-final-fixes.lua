@@ -1,21 +1,8 @@
 -- LootingRemnants
 -- darkfrei 2020-12-03 (original), refactored
 
------------------------------------
--- CONFIG
------------------------------------
+local IGNORES = require("cfg/ignores")
 
-local BLACKLISTED_ITEMS = {
-	["electric-energy-interface"]  = true,
-	["linked-chest"]               = true,
-	["infinity-chest"]             = true,
-	["infinity-pipe"]              = true,
-	["infinity-cargo-wagon"]       = true,
-	["heat-interface"]             = true,
-	["proxy-container"]            = true,
-	["bottomless-chest"]           = true,
-	["linked-belt"]                = true,
-}
 
 -----------------------------------
 -- HELPERS
