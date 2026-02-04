@@ -1,4 +1,4 @@
-local CONSTANTS = require("cfg/CONSTANTS")
+local CONSTANTS = require("cfg/constants")
 
 
 -- TODO: add manual ignores
