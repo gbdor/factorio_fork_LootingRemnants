@@ -1,4 +1,4 @@
-local constants = require("cfg/constants")
+local CONSTANTS = require("cfg/CONSTANTS")
 
 
 -- TODO: add manual ignores
@@ -6,7 +6,7 @@ local constants = require("cfg/constants")
 data:extend({
   {
     type = "double-setting",
-    name = constants.MOD_NAME .. "-loot-proba",
+    name = CONSTANTS.MOD_NAME .. "-loot-proba",
     setting_type = "startup",
     default_value = 0.8,
     minimum_value = 0,
@@ -14,7 +14,7 @@ data:extend({
     order = "a",
   },{
     type = "double-setting",
-    name = constants.MOD_NAME .. "-loot-min",
+    name = CONSTANTS.MOD_NAME .. "-loot-min",
     setting_type = "startup",
     default_value = 0.3,
     minimum_value = 0,
@@ -22,11 +22,18 @@ data:extend({
     order = "a",
   },{
     type = "double-setting",
-    name = constants.MOD_NAME .. "-loot-max",
+    name = CONSTANTS.MOD_NAME .. "-loot-max",
     setting_type = "startup",
     default_value = 1,
     minimum_value = 0,
     maximum_value = 100,
+    order = "a",
+  },{
+    type = "string-setting",
+    name = CONSTANTS.MOD_NAME .. "-extra-nospawn-items",
+    setting_type = "startup",
+    default_value = "",
+    allow_blank = true,
     order = "a",
   }
 })
