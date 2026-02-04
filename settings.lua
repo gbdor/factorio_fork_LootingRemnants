@@ -1,7 +1,7 @@
-local constants = require("lua/constants")
+local constants = require("cfg/constants")
 
 
-
+-- TODO: add manual ignores
 
 data:extend({
   {
