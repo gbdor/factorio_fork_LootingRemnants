@@ -5,12 +5,12 @@ local IGNORES = require("cfg/ignores")
 local CONSTANTS = require("cfg/constants")
 
 
-local settings_loot_proba = settings.startup[constants.MOD_NAME .. "-loot-proba"].value
-local settings_loot_min = settings.startup[constants.MOD_NAME .. "-loot-min"].value
-local settings_loot_max = settings.startup[constants.MOD_NAME .. "-loot-max"].value
+local settings_loot_proba = settings.startup[CONSTANTS.MOD_NAME .. "-loot-proba"].value
+local settings_loot_min = settings.startup[CONSTANTS.MOD_NAME .. "-loot-min"].value
+local settings_loot_max = settings.startup[CONSTANTS.MOD_NAME .. "-loot-max"].value
 
 if settings_loot_max < settings_loot_min then
-	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", constants.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
+	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", CONSTANTS.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
 end
 
 
@@ -34,6 +34,25 @@ local function is_excepted(prototype)
 		end
 	end
 	return false
+end
+
+
+local function append_nospawn_items(nospawn_table, comma_separated_items_list)
+
+	if type(comma_separated_items_list) ~= "string" then
+		error(string.format("Unable to parse exclude string'%s' - expecting comma-separated list", comma_separated_items_list))
+	end
+
+	if comma_separated_items_list == "" then return end
+
+	log(string.format("[LootingRemnants] Adding custom no-spawn items '%s' -> BEFORE %s", comma_separated_items_list, serpent.block(nospawn_table)))
+
+	for itemname in string.gmatch(comma_separated_items_list,  "[^,%s]+") do
+		log(string.format("[LootingRemnants] processing item '%s'", itemname))
+		nospawn_table[itemname] = true
+	end
+
+	log(string.format("[LootingRemnants] Updated no-spawn list is -> AFTER %s" , serpent.block(nospawn_table)))
 end
 
 
@@ -82,7 +101,7 @@ local function build_loot(recipe)
 				local cur_loot_item = {
 					item        = ing.name,
 					probability = settings_loot_proba,
-					count_min   = settings_loot_min*actual_cost
+					count_min   = settings_loot_min*actual_cost,
 					count_max   = settings_loot_max*actual_cost
 				}
 
@@ -170,6 +189,9 @@ end
 -----------------------------------
 
 local seen_types = {}
+
+
+append_nospawn_items(IGNORES.ITEMS_NEVER_SPAWN, settings.startup[CONSTANTS.MOD_NAME .. "-extra-nospawn-items"].value)
 
 for _, recipe in pairs(data.raw.recipe) do
 
