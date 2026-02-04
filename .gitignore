@@ -1,3 +1,13 @@
-*.7z
 
+# Temp and backup files
+*.7z
+*.tmp
+*.bak
+
+
+# Parts of build process
 changes.txt
+
+
+# Release files
+LootingRemnants*.zip
