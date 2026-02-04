@@ -2,7 +2,7 @@ local ignores = {
 
   -- Names of items that should never be spawned if value is true
   ---@type {string=>bool} 
-  BLACKLISTED_ITEMS = {
+  ITEMS_NEVER_SPAWN = {
     ["electric-energy-interface"]  = true,
     ["linked-chest"]               = true,
     ["infinity-chest"]             = true,

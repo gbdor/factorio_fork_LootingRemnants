@@ -2,6 +2,7 @@
 -- darkfrei 2020-12-03 (original), refactored
 
 local IGNORES = require("cfg/ignores")
+local CONSTANTS = require("cfg/constants")
 
 
 -----------------------------------
@@ -18,7 +19,7 @@ local function is_excepted(prototype)
 	local mods = prototype and prototype.exception_mods
 	if type(mods) ~= "table" then return false end
 	for _, name in pairs(mods) do
-		if name == "LootingRemnants" then 
+		if name == CONSTANTS.MOD_NAME then 
 			log(string.format("[LootingRemnants] Skipping proto '%s' that has an exclusion for mods %s", prototype.name, serpent.line(mods)))
 			return true 
 		end
@@ -66,7 +67,7 @@ local function build_loot(ingredients)
 	for _, raw_ingredient in pairs(ingredients) do
 		local ing = normalise_ingredient(raw_ingredient)
 		if ing then
-			if BLACKLISTED_ITEMS[ing.name] then
+			if IGNORES.ITEMS_NEVER_SPAWN[ing.name] then
 				log(string.format("[LootingRemnants] Skipping blacklisted item '%s'", ing.name))
 			else
 				local count_max = math.max(ing.amount, 1)
