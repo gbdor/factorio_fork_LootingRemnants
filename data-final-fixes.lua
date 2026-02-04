@@ -157,14 +157,14 @@ local function process_recipe(recipe, seen_types)
 
 	local item_proto = data.raw.item[output.name]
 	if not item_proto or not item_proto.place_result then
-		log(string.format("[LootingRemnants] Skipping non-placeable item '%s' in recipe '%s'", output.name, recipe.name))
+		-- log(string.format("[LootingRemnants] Skipping non-placeable item '%s' in recipe '%s'", output.name, recipe.name))
 		return
 	end
 
 	local entity_name = item_proto.place_result
 	local entity_proto = find_entity_prototype(entity_name, seen_types)
 	if not entity_proto then
-		log(string.format("[LootingRemnants] No minable prototype found for entity '%s' in recipe '%s'", entity_name, recipe.name))
+		-- log(string.format("[LootingRemnants] No minable prototype found for entity '%s' in recipe '%s'", entity_name, recipe.name))
 		return
 	end
 
@@ -197,7 +197,7 @@ for _, recipe in pairs(data.raw.recipe) do
 
     -- Skip recycling recipes
     if string.sub(recipe.name, -10) == "-recycling" then
-    	log(string.format("[LootingRemnants] Skipping recycling recipe '%s'", recipe.name))
+    	-- log(string.format("[LootingRemnants] Skipping recycling recipe '%s'", recipe.name))
 
     elseif is_excepted(recipe) then
     	log(string.format("[LootingRemnants] Skipping excepted recipe '%s'", recipe.name))
@@ -210,4 +210,4 @@ for _, recipe in pairs(data.raw.recipe) do
 -- Log all prototype types that were encountered
 local type_list = {}
 for t in pairs(seen_types) do table.insert(type_list, t) end
-log("[LootingRemnants] Entity prototype types encountered: " .. serpent.line(type_list))
+-- log("[LootingRemnants] Entity prototype types encountered: " .. serpent.line(type_list))
