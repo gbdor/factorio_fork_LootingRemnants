@@ -5,6 +5,15 @@ local IGNORES = require("cfg/ignores")
 local CONSTANTS = require("cfg/constants")
 
 
+local settings_loot_proba = settings.startup[constants.MOD_NAME .. "-loot-proba"].value
+local settings_loot_min = settings.startup[constants.MOD_NAME .. "-loot-min"].value
+local settings_loot_max = settings.startup[constants.MOD_NAME .. "-loot-max"].value
+
+if settings_loot_max < settings_loot_min then
+	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", constants.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
+end
+
+
 -----------------------------------
 -- HELPERS
 -----------------------------------
@@ -58,27 +67,23 @@ end
 -- LOOT BUILDING
 -----------------------------------
 
--- Given a list of recipe ingredients, returns a loot table suitable for
+-- Given a recipe, returns a loot table suitable for
 -- assignment to a prototype, or nil if no valid loot entries remain.
--- Blacklisted ingredients are individually skipped; the rest still register.
-local function build_loot(ingredients)
+local function build_loot(recipe)
 	local loot = {}
 
-	for _, raw_ingredient in pairs(ingredients) do
+	for _, raw_ingredient in pairs(recipe.ingredients) do
 		local ing = normalise_ingredient(raw_ingredient)
 		if ing then
 			if IGNORES.ITEMS_NEVER_SPAWN[ing.name] then
-				log(string.format("[LootingRemnants] Skipping blacklisted item '%s'", ing.name))
+				log(string.format("[LootingRemnants] Skipping blacklisted item '%s' from recipe '%s'", ing.name, recipe.name))
 			else
-				local count_max = math.max(ing.amount, 1)
-				local count_min = 0
-				if count_max == 1 then count_min = 1 end
-
+				local actual_cost = ing.amount/(recipe.results.amount or 1) 
 				local cur_loot_item = {
 					item        = ing.name,
-					probability = 1,
-					count_min   = count_min
-					count_max   = count_max
+					probability = settings_loot_proba,
+					count_min   = settings_loot_min*actual_cost
+					count_max   = settings_loot_max*actual_cost
 				}
 
 				table.insert(loot, cur_loot_item)
@@ -86,7 +91,7 @@ local function build_loot(ingredients)
 		end
 	end
 
-	log(string.format("[LootingRemnants] Recipe '%s' provides loot %s", serpent.line(ingredients), serpent.block(loot)))
+	log(string.format("[LootingRemnants] Recipe '%s' provides loot %s", recipe.name, serpent.block(loot)))
 	return (#loot > 0) and loot or nil
 end
 
@@ -151,7 +156,7 @@ local function process_recipe(recipe, seen_types)
 		return
 	end
 
-	local loot = build_loot(recipe.ingredients)
+	local loot = build_loot(recipe)
 	if loot then
 		entity_proto.loot = loot
 		log(string.format("[LootingRemnants] Assigned %d loot entries to '%s' in recipe '%s'", #loot, entity_name, recipe.name))
