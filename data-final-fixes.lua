@@ -1,167 +1,186 @@
-local constants = require("lua/constants")
-
-
--- darkfrei 2020-12-03: I want to rewrite it, but now just update
-
 -- LootingRemnants
+-- darkfrei 2020-12-03 (original), refactored
 
-local entity_loot = {}
-local entity_types = {}
-
-
--- read settings
-local settings_loot_proba = settings.startup[constants.MOD_NAME .. "-loot-proba"].value
-local settings_loot_min = settings.startup[constants.MOD_NAME .. "-loot-min"].value
-local settings_loot_max = settings.startup[constants.MOD_NAME .. "-loot-max"].value
-
-if settings_loot_max < settings_loot_min then
-	error(string.format("[%s.%s] loot max (%d) < loot min (%d)", constants.MOD_NAME, FILENAME, settings_loot_max, settings_loot_min))
-end
+local IGNORES = require("cfg/ignores")
+local CONSTANTS = require("cfg/constants")
 
 
+-----------------------------------
+-- HELPERS
+-----------------------------------
 
-function is_exception_mod (exception_mods) -- exception for mod, just list of names of mods
-	--[[
-	for example add the line
-	data.raw.car.car.exception_mods = {"Deconstruction", "LootingRemnants"} 
-	and this prototype will be ignored by this mods
-	--]]
-	
-	if not exception_mods then return false end
-	
-	if type (exception_mods) == "table" then
-		for i, exception in pairs (exception_mods) do
-			if exception == "LootingRemnants" then
-				return true
-			end
+-- Returns true if the prototype has an entry to exclude this mod
+--[[
+for example add the line
+data.raw.car.car.exception_mods = {"Deconstruction", "LootingRemnants"} 
+and this prototype will be ignored by this mods
+--]]
+local function is_excepted(prototype)
+	local mods = prototype and prototype.exception_mods
+	if type(mods) ~= "table" then return false end
+	for _, name in pairs(mods) do
+		if name == CONSTANTS.MOD_NAME then 
+			log(string.format("[LootingRemnants] Skipping proto '%s' that has an exclusion for mods %s", prototype.name, serpent.line(mods)))
+			return true 
 		end
 	end
 	return false
 end
 
 
-function is_value_in_list (value, list)
-	for i, v in pairs (list) do
-		if v == value then return true end
-	end
-	return false
-end
-
--- local entity_types = {"container", "furnace", "boiler", "generator", "transport-belt", "mining-drill", "inserter", "pipe", "offshore-pump", "electric-pole", "radar", "lamp", "pipe-to-ground", "assembling-machine", "lab", "wall", "splitter", "underground-belt", "loader", "ammo-turret", "player-port", "solar-panel", "train-stop", "rail-signal", "rail-chain-signal", "gate", "land-mine", "logistic-robot", "construction-robot", "logistic-container", "rocket-silo", "roboport", "accumulator", "beacon", "storage-tank", "pump", "arithmetic-combinator", "decider-combinator", "constant-combinator", "power-switch", "programmable-speaker", "electric-energy-interface", "reactor", "heat-pipe", "electric-turret", "fluid-turret", "artillery-turret"}
-
-function get_entity_prototype (entity_name)
-	for prototype_type_name, prototype_type in pairs (data.raw) do
-		for prototype_name, prototype in pairs (prototype_type) do
-			if prototype.minable and prototype_name == entity_name then
-				if not is_value_in_list (prototype_type_name, entity_types) then
-					table.insert (entity_types, prototype_type_name)
-				end
-				return prototype
-			end
+-- Finds the first minable entity prototype matching `entity_name` across all
+-- of data.raw.  Also records any new prototype types it encounters into
+-- `seen_types` as a side effect (used for the final log line).
+local function find_entity_prototype(entity_name, seen_types)
+	for type_name, type_table in pairs(data.raw) do
+		local proto = type_table[entity_name]
+		if proto and proto.minable then
+			seen_types[type_name] = true
+			return proto
 		end
 	end
+	return nil
 end
 
 
-for i, recipe in pairs (data.raw.recipe) do
+-- Returns the ingredient as { name, amount } if it is an item, or nil
+-- if it is a fluid or other non-item type.
+local function normalise_ingredient(ingredient)
+	if ingredient.type ~= "item" then return nil end
 
-	if string.sub(recipe.name , -10) =="-recycling" then 
-		log(string.format("[LootingRemnants-gbd] Ignoring recipe (not building loot for output) : '%s'", recipe.name))
-		goto end_of_loop 
-	end
-
-	local exception_recipe = is_exception_mod (recipe.exception_mods)
-	
-	local handler = recipe.normal or recipe -- nice, no?
-	if not exception_recipe and handler.result and handler.ingredients then 
-		-- not for Factorio 1.1
-		log('old recipe with result: ' .. recipe.name)	
-		local item_name = handler.result
-		local item_prototype = data.raw.item[item_name]
-		if item_prototype and item_prototype.place_result then
-			local entity_name = item_prototype.place_result
-			local prototype = get_entity_prototype (entity_name)
-			if prototype and not is_exception_mod (prototype.exception_mods) then
-				if not prototype.loot then
-					local loot = {}
-					for j, ingredient in pairs (handler.ingredients) do
-						local ing_type = ingredient.type or 'item'
-						if ing_type == 'item' then
-							local result_count = handler.result_count or 1
-							local ing_item_name = ingredient.name or ingredient[1]
-							local count_min = 0
-							local count_max = ingredient.amount or ingredient[2]
-					if count_max < 1 then count_max = 1 end -- added in 0.1.4
-					local probability = 1
-					if count_max == 1 then 
-						count_min = 1
-					-- probability = 0.5 / result_count
-				else
-					-- count_max = count_max / result_count
-				end
-				
-				table.insert (loot, {item=ing_item_name, probability=probability, count_min=count_min, count_max = count_max})
-			end
-		end
-		if #loot > 0 then
-			prototype.loot = loot
-		end
-	end
-			else -- no prototype
-			log ('no prototype recipe: ["'..recipe.name..'"] item_type: ["'..item_prototype.type..'"] item_name: ["'..item_name..'"] entity_name: ["'..entity_name..'"]')
-		end
-	end
-elseif not exception_recipe and handler.results and handler.ingredients then
-
-	local results = handler.results
-	if #results > 1 then
-		-- log(string.format("Ignoring recipe with more than 1 result: %s", serpent.block(handler.results)))
-	elseif #results == 1 then
-		
-		local item_name = results[1].name
-		local result_type = results[1].type
-		local result_amount = results[1].amount or 1
-		local item_prototype = data.raw.item[item_name]
-
-		if result_type == "item" and item_prototype and item_prototype.place_result then
-			log('new recipe with results: ' .. recipe.name)	
-			
-			local entity_name = item_prototype.place_result
-			local prototype = get_entity_prototype (entity_name)
-			if prototype and not is_exception_mod (prototype.exception_mods) then
-				print ('item: '..item_name..' type: ["'..item_prototype.type..'"] entity: '..prototype.name..' ["'..prototype.type..'"]')
-				if not prototype.loot then
-					local loot = {}
-					for j, ingredient in pairs (handler.ingredients) do
-
-						if ingredient[2] then
-							log(string.format("[%s] %s has ingredient[2] - handler.ingredients = %s", constants.MOD_NAME, item_name, serpent.block(handler.ingredients)))
-						end
-
-						local ing_type = ingredient.type or 'item'
-						if ing_type == 'item' then
-							local ing_item_name = ingredient.name or ingredient[1]
-							local ing_actual_cost = (ingredient.amount or ingredient[2])/result_amount
-
-							local count_min = settings_loot_min*ing_actual_cost
-							local count_max = settings_loot_max*ing_actual_cost
-						end
-					end
-					table.insert (loot, {item=ing_item_name, probability=settings_loot_proba, count_min=count_min, count_max = count_max})
-				end
-				if loot and #loot > 0 then
-					prototype.loot = loot
-				end
-			else -- no prototype or is_exception_mod
-				log ('no prototype recipe: ["'..recipe.name..'"] item_type: ["'..item_prototype.type..'"] item_name: ["'..item_name..'"] entity_name: ["'..entity_name..'"]')
-			end
-		end
-	end
-else
-	log('exception for recipe: ' .. recipe.name)	
-		-- exception for recipe or to result or no ingredients
-	end
-	::end_of_loop::
+	return {
+		name   = ingredient.name,
+		amount = ingredient.amount,
+	}
 end
 
-log ('entity_types: ' .. serpent.line(entity_types))
+-----------------------------------
+-- LOOT BUILDING
+-----------------------------------
+
+-- Given a list of recipe ingredients, returns a loot table suitable for
+-- assignment to a prototype, or nil if no valid loot entries remain.
+-- Blacklisted ingredients are individually skipped; the rest still register.
+local function build_loot(ingredients)
+	local loot = {}
+
+	for _, raw_ingredient in pairs(ingredients) do
+		local ing = normalise_ingredient(raw_ingredient)
+		if ing then
+			if IGNORES.ITEMS_NEVER_SPAWN[ing.name] then
+				log(string.format("[LootingRemnants] Skipping blacklisted item '%s'", ing.name))
+			else
+				local count_max = math.max(ing.amount, 1)
+				local count_min = 0
+				if count_max == 1 then count_min = 1 end
+
+				local cur_loot_item = {
+					item        = ing.name,
+					probability = 1,
+					count_min   = count_min
+					count_max   = count_max
+				}
+
+				table.insert(loot, cur_loot_item)
+			end
+		end
+	end
+
+	log(string.format("[LootingRemnants] Recipe '%s' provides loot %s", serpent.line(ingredients), serpent.block(loot)))
+	return (#loot > 0) and loot or nil
+end
+
+-----------------------------------
+-- RECIPE EXTRACTION
+-----------------------------------
+
+-- Finds the single item output in a recipe's results.
+-- Returns {name, amount} if exactly one item output exists (other non-item
+-- outputs are ignored). Returns nil if there are zero or multiple item outputs.
+local function get_recipe_item_output(recipe)
+	if not recipe.results then return nil end
+
+	local found = nil
+	for _, output in pairs(recipe.results) do
+		if output.type == "item" then
+			if found then
+				log(string.format("[LootingRemnants] Skipping recipe '%s' — multiple item outputs", recipe.name))
+				return nil
+			end
+			found = output
+		end
+	end
+
+	if not found then
+		log(string.format("[LootingRemnants] Skipping recipe '%s' — no item outputs", recipe.name))
+		return nil
+	end
+
+	return { name = found.name, amount = found.amount }
+end
+
+-----------------------------------
+-- CORE: resolve recipe -> entity -> assign loot
+-----------------------------------
+
+-- Attempts to assign loot to the entity that `recipe` produces.
+-- `seen_types` is passed through for prototype-type tracking.
+local function process_recipe(recipe, seen_types)
+	if not recipe.ingredients then return end
+
+	local output = get_recipe_item_output(recipe)
+	if not output then return end
+
+	local item_proto = data.raw.item[output.name]
+	if not item_proto or not item_proto.place_result then
+		log(string.format("[LootingRemnants] Skipping non-placeable item '%s' in recipe '%s'", output.name, recipe.name))
+		return
+	end
+
+	local entity_name = item_proto.place_result
+	local entity_proto = find_entity_prototype(entity_name, seen_types)
+	if not entity_proto then
+		log(string.format("[LootingRemnants] No minable prototype found for entity '%s' in recipe '%s'", entity_name, recipe.name))
+		return
+	end
+
+	if is_excepted(entity_proto) then return end
+
+	if entity_proto.loot then
+		log(string.format("[LootingRemnants] Skipping entity '%s' in recipe '%s' — already has loot %s", entity_name, recipe.name, serpent.block(entity_proto.loot)))
+		return
+	end
+
+	local loot = build_loot(recipe.ingredients)
+	if loot then
+		entity_proto.loot = loot
+		log(string.format("[LootingRemnants] Assigned %d loot entries to '%s' in recipe '%s'", #loot, entity_name, recipe.name))
+	else
+		log(string.format("[LootingRemnants] No valid loot built for entity '%s' in recipe '%s'", entity_name, recipe.name))
+	end
+end
+
+-----------------------------------
+-- MAIN LOOP
+-----------------------------------
+
+local seen_types = {}
+
+for _, recipe in pairs(data.raw.recipe) do
+
+    -- Skip recycling recipes
+    if string.sub(recipe.name, -10) == "-recycling" then
+    	log(string.format("[LootingRemnants] Skipping recycling recipe '%s'", recipe.name))
+
+    elseif is_excepted(recipe) then
+    	log(string.format("[LootingRemnants] Skipping excepted recipe '%s'", recipe.name))
+
+    else
+    	process_recipe(recipe, seen_types)
+    end
+  end
+
+-- Log all prototype types that were encountered
+local type_list = {}
+for t in pairs(seen_types) do table.insert(type_list, t) end
+log("[LootingRemnants] Entity prototype types encountered: " .. serpent.line(type_list))
