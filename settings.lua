@@ -43,3 +43,20 @@ data:extend({
     order = "a",
   }
 })
+
+
+
+-- Expose settings for other mods to modify
+if mods["lib-settings"] then
+
+  L("Exposing settings through settings-lib")
+
+  local lib-settings = require("__lib-settings__/lib")
+
+  lib-settings.exposeSetting(CONSTANTS.MOD_NAME .. "-loot-proba", {auto_hide_modified = true})
+  lib-settings.exposeSetting(CONSTANTS.MOD_NAME .. "-loot-min", {auto_hide_modified = true})
+  lib-settings.exposeSetting(CONSTANTS.MOD_NAME .. "-loot-max", {auto_hide_modified = true})
+  lib-settings.exposeSetting(CONSTANTS.MOD_NAME .. "-extra-nospawn-items", {auto_hide_modified = true})
+end
+
+
