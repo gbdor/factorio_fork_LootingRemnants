@@ -100,7 +100,7 @@ local function build_loot(recipe)
 				local actual_cost = ing.amount/(recipe.results.amount or 1) 
 				local cur_loot_item = {
 					item        = ing.name,
-					probability = settings_loot_proba,
+					independent_probability = settings_loot_proba,
 					count_min   = settings_loot_min*actual_cost,
 					count_max   = settings_loot_max*actual_cost
 				}
